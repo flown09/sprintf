@@ -20,6 +20,7 @@ typedef struct {
 int define_length(long long int num);
 void number_to_string(long long int num , char *str);
 void define_sett(const char *format, int *i, Settings *settings);
+void process_minus_flag(char *str, int *output, Settings *settings, int argum_length);
 void process_d(char *str, int *output, Settings *settings, long long int argum);
 void process_s(char *str, int *output, Settings *settings, char *argum);
 void process_c(char *str, int *output, Settings *settings, char *argum);
@@ -106,9 +107,25 @@ int s21_sprintf(char *str, const char *format, ...)
     return output;
 }
 
+void process_minus_flag(char *str, int *output, Settings *settings, int argum_length)
+{
+    if (settings->minus_flag == 0)
+    {
+        if (settings->width > argum_length)
+        {
+            for (int i = 0; i < settings->width - argum_length - 1; i++)
+                str[(*output)++] = ' ';
+        }
+    }
+}
+
 void process_c(char *str, int *output, Settings *settings, char *argum)
 {
+    int argum_length = 1;
 
+    process_minus_flag(str, output, settings, argum_length);
+
+    str[(*output)++] = argum[0];
 }
 
 void process_s(char *str, int *output, Settings *settings, char *argum)
@@ -119,15 +136,8 @@ void process_s(char *str, int *output, Settings *settings, char *argum)
     {
         argum_length++;
     }
-
-    if (settings->minus_flag == 0)
-    {
-        if (settings->width > argum_length)
-        {
-            for (int i = 0; i < settings->width - argum_length - 1; i++)
-                str[(*output)++] = ' ';
-        }
-    }
+    process_minus_flag(str, output, settings, argum_length);
+    
     //printf("%d, %d, %d\n", settings->is_accuracy, settings->accuracy, argum_length);
     if (settings->is_accuracy && settings->accuracy < argum_length)
     {
@@ -151,16 +161,7 @@ void process_d(char *str, int *output, Settings *settings, long long int argum)
     }
 
     int argum_length = (settings->accuracy > define_length(argum)) ? settings->accuracy : define_length(argum);
-    if (settings->minus_flag == 0)
-    {
-        if (settings->width > argum_length)
-        {
-            for (int i = 0; i < settings->width - argum_length - 1; i++)
-                str[(*output)++] = ' ';
-            if (!settings->plus_flag)
-                str[(*output)++] = ' ';
-        }
-    }
+    process_minus_flag(str, output, settings, argum_length);
     
     if (settings->plus_flag)
     {
@@ -276,13 +277,15 @@ int main(void)
     n2 = s21_sprintf(mas2, "%lld", 2147483648);
     n3 = sprintf(mas3, "%.2s %s", "priv", "huy");
     n4 = s21_sprintf(mas4, "%.2s %s", "priv", "huy");
-    n5 = sprintf(mas5, "%c", 'h');
+    n5 = sprintf(mas5, "%5c", 'A');
+    n6 = sprintf(mas6, "%5c", 'A');
 
     printf("sprintf: %lld, %s\n", n1, mas1);
     printf("s21_sprintf: %lld, %s\n", n2, mas2);
     printf("sprintf: %d, %s\n", n3, mas3);
     printf("s21_sprintf: %d, %s\n", n4, mas4);
-    printf("sprintf: %s", mas5);
+    printf("sprintf: %s\n", mas5);
+    printf("sprintf: %s", mas6);
 
     return 0;
 
