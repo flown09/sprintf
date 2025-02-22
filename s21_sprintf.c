@@ -19,11 +19,14 @@ typedef struct {
 
 int define_length(long long int num);
 void number_to_string(long long int num , char *str);
+int count_fraction_digits(double num, int max_digits);
+void double_to_string(double num, char *str, int max_digits);
 void define_sett(const char *format, int *i, Settings *settings);
 void process_minus_flag(char *str, int *output, Settings *settings, int argum_length);
 void process_d(char *str, int *output, Settings *settings, long long int argum);
 void process_s(char *str, int *output, Settings *settings, char *argum);
 void process_c(char *str, int *output, Settings *settings, char *argum);
+void process_f(char *str, int *output, Settings *settings, double argum);
 
 
 int s21_sprintf(char *str, const char *format, ...)
@@ -89,11 +92,16 @@ int s21_sprintf(char *str, const char *format, ...)
                 //     wchar_t value = va_arg(arg, wchar_t);
                 //     process_c(str, &output, &settings, value);
                 // }
-                
+                // else
                 {
                     char* value = va_arg(arg, char *);
                     process_c(str, &output, &settings, value);
                 }
+            }
+            else if (settings.f_spec)
+            {
+                double value = va_arg(arg, double);
+                process_f(str, &output, &settings, value);
             }
         }
         else
@@ -117,6 +125,50 @@ void process_minus_flag(char *str, int *output, Settings *settings, int argum_le
                 str[(*output)++] = ' ';
         }
     }
+}
+
+void process_f(char *str, int *output, Settings *settings, double argum)
+{
+    int is_negative = 0;
+    if (argum < 0)
+    {
+        is_negative = 1;
+        argum = -argum;
+    }
+
+    char buffer[100];
+    if (settings->is_accuracy)
+    {
+        double_to_string(argum, buffer, settings->accuracy);
+    }
+    else
+    {
+        int argum_length = define_length((int)argum);
+        double_to_string(argum, buffer, argum_length);
+    }
+
+    int len = 0;
+    for (; ; len++)
+    {
+        if (buffer[len] == '\0')
+            break;
+    }
+    printf("\n%d\n", len);
+    process_minus_flag(str, output, settings, len);
+
+    if (settings->plus_flag)
+    {
+        if (argum > 0)
+            str[(*output)++] = '+';
+        else
+            str[(*output)++] = '-';
+    }
+
+    if (settings->space_flag && str[(*output)] != ' ' && is_negative == 0)
+        str[(*output)++] = ' ';
+
+    for (int i = 0; buffer[i] != '\0'; i++)
+        str[(*output)++] = buffer[i];
 }
 
 void process_c(char *str, int *output, Settings *settings, char *argum)
@@ -273,19 +325,23 @@ int main(void)
     char mas5[100];
     char mas6[100], mas7[100], mas8[100], ma9[100], mas10[100];
     int n1, n2, n3, n4, n5, n6, n7, n8, n9, n10;
-    n1 = sprintf(mas1, "%lld", 2147483648);
-    n2 = s21_sprintf(mas2, "%lld", 2147483648);
+    n1 = sprintf(mas1, "%.1lld", 2147483648);
+    n2 = s21_sprintf(mas2, "%.1lld", 2147483648);
     n3 = sprintf(mas3, "%.2s %s", "priv", "huy");
     n4 = s21_sprintf(mas4, "%.2s %s", "priv", "huy");
     n5 = sprintf(mas5, "%5c", 'A');
-    n6 = sprintf(mas6, "%5c", 'A');
+    //n6 = s21_sprintf(mas6, "%5c", 'A');
+    n7 = sprintf(mas7, "% .5f", 12.123456789);
+    n8 = s21_sprintf(mas8, "% .5f", 12.123456789);
 
-    printf("sprintf: %lld, %s\n", n1, mas1);
-    printf("s21_sprintf: %lld, %s\n", n2, mas2);
+    printf("sprintf: %d, %s\n", n1, mas1);
+    printf("s21_sprintf: %d, %s\n", n2, mas2);
     printf("sprintf: %d, %s\n", n3, mas3);
     printf("s21_sprintf: %d, %s\n", n4, mas4);
-    printf("sprintf: %s\n", mas5);
-    printf("sprintf: %s", mas6);
+    printf("sprintf: %d, %s\n", n5, mas5);
+    //printf("sprintf: %d, %s\n", n6, mas6);
+    printf("sprintf: %d, %s\n", n7, mas7);
+    printf("sprintf: %d, %s\n", n8, mas8);
 
     return 0;
 
