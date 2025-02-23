@@ -1,5 +1,8 @@
 #include <stdio.h>
+#include <stdlib.h>
 #include <stdarg.h>
+#include <wchar.h>
+#include <locale.h>
 
 typedef struct {
     int c_spec;
@@ -18,15 +21,19 @@ typedef struct {
 } Settings;
 
 int define_length(long long int num);
+int define_length_unsigned(unsigned long long int num);
 void number_to_string(long long int num , char *str);
+void number_to_string_unsigned(unsigned long long int num , char *str);
 int count_fraction_digits(double num, int max_digits);
 void double_to_string(double num, char *str, int max_digits);
 void define_sett(const char *format, int *i, Settings *settings);
 void process_minus_flag(char *str, int *output, Settings *settings, int argum_length);
 void process_d(char *str, int *output, Settings *settings, long long int argum);
 void process_s(char *str, int *output, Settings *settings, char *argum);
-void process_c(char *str, int *output, Settings *settings, char *argum);
+void process_c(char *str, int *output, Settings *settings, int argum);
+void process_lc(char *str, int *output, Settings *settings, wchar_t argum);
 void process_f(char *str, int *output, Settings *settings, double argum);
+void process_u(char *str, int *output, Settings *settings, unsigned long long int argum);
 
 
 int s21_sprintf(char *str, const char *format, ...)
@@ -50,9 +57,7 @@ int s21_sprintf(char *str, const char *format, ...)
                 break;
 
             i++;
-            //int rollback = i;
             Settings settings = {0};
-            
             define_sett(format, &i, &settings);
             i--;
 
@@ -61,12 +66,8 @@ int s21_sprintf(char *str, const char *format, ...)
             // settings.space_flag, settings.width, settings.accuracy, settings.length, settings.no_specs);
 
             if (settings.no_specs)
-            {
-                // str[output++] = '%';
-                // i = rollback;
                 continue;
-            }
-            
+
             if (settings.d_spec)
             {
                 long long int value;
@@ -87,14 +88,15 @@ int s21_sprintf(char *str, const char *format, ...)
             }
             else if (settings.c_spec)
             {
-                // if (settings.length == 'l')
-                // {
-                //     wchar_t value = va_arg(arg, wchar_t);
-                //     process_c(str, &output, &settings, value);
-                // }
-                // else
+
+                if (settings.length == 'l')
                 {
-                    char* value = va_arg(arg, char *);
+                    wchar_t value = (wchar_t) va_arg(arg, int);
+                    process_lc(str, &output, &settings, value);
+                }
+                else
+                {
+                    int value = va_arg(arg, int);
                     process_c(str, &output, &settings, value);
                 }
             }
@@ -102,6 +104,19 @@ int s21_sprintf(char *str, const char *format, ...)
             {
                 double value = va_arg(arg, double);
                 process_f(str, &output, &settings, value);
+            }
+            else if (settings.u_spec)
+            {
+                unsigned long long value;
+                if (settings.length == 'h')
+                    value = (unsigned short int) va_arg(arg, unsigned int);
+                else if (settings.length == 'l')
+                    value = (unsigned long int) va_arg(arg, unsigned int);
+                else if (settings.length == 'L')
+                    value = (unsigned long long int) va_arg(arg, unsigned int);
+                else
+                    value = va_arg(arg, unsigned int);
+                process_u(str, &output, &settings, value);
             }
         }
         else
@@ -121,10 +136,37 @@ void process_minus_flag(char *str, int *output, Settings *settings, int argum_le
     {
         if (settings->width > argum_length)
         {
-            for (int i = 0; i < settings->width - argum_length - 1; i++)
+            for (int i = 0; i < settings->width - argum_length; i++)
                 str[(*output)++] = ' ';
         }
     }
+}
+
+void process_u(char *str, int *output, Settings *settings, unsigned long long int argum)
+{
+    int def_len_uns = define_length_unsigned(argum);
+    int argum_length = (settings->accuracy > def_len_uns) ? settings->accuracy : def_len_uns;
+    printf("acc: %d, len: %d", settings->accuracy, argum_length);
+    process_minus_flag(str, output, settings, argum_length);
+
+    if (settings->plus_flag && argum > 0)
+        str[(*output)++] = '+';
+
+    if (settings->space_flag && str[(*output)] != ' ')
+        str[(*output)++] = ' ';
+
+    if (settings->accuracy)
+    {
+        for (int i = 0; i < settings->accuracy - def_len_uns; i++)
+            str[(*output)++] = '0';
+    }
+
+    char buffer[100];
+
+    number_to_string_unsigned(argum, buffer);
+
+    for (int i = 0; buffer[i] != '\0'; i++)
+        str[(*output)++] = buffer[i];
 }
 
 void process_f(char *str, int *output, Settings *settings, double argum)
@@ -153,7 +195,7 @@ void process_f(char *str, int *output, Settings *settings, double argum)
         if (buffer[len] == '\0')
             break;
     }
-    printf("\n%d\n", len);
+    
     process_minus_flag(str, output, settings, len);
 
     if (settings->plus_flag)
@@ -171,13 +213,23 @@ void process_f(char *str, int *output, Settings *settings, double argum)
         str[(*output)++] = buffer[i];
 }
 
-void process_c(char *str, int *output, Settings *settings, char *argum)
+void process_lc(char *str, int *output, Settings *settings, wchar_t argum) {
+    char buffer[MB_LEN_MAX];
+    int len = wctomb(buffer, argum); 
+
+    if (len < 0) return;
+
+    process_minus_flag(str, output, settings, len);
+    for (int i = 0; i < len; i++) {
+        str[(*output)++] = buffer[i];
+    }
+}
+
+void process_c(char *str, int *output, Settings *settings, int argum)
 {
     int argum_length = 1;
-
     process_minus_flag(str, output, settings, argum_length);
-
-    str[(*output)++] = argum[0];
+    str[(*output)++] = (char)argum;
 }
 
 void process_s(char *str, int *output, Settings *settings, char *argum)
@@ -212,7 +264,8 @@ void process_d(char *str, int *output, Settings *settings, long long int argum)
         argum = -argum;
     }
 
-    int argum_length = (settings->accuracy > define_length(argum)) ? settings->accuracy : define_length(argum);
+    int def_len = define_length(argum);
+    int argum_length = (settings->accuracy > def_len) ? settings->accuracy : def_len;
     process_minus_flag(str, output, settings, argum_length);
     
     if (settings->plus_flag)
@@ -228,7 +281,7 @@ void process_d(char *str, int *output, Settings *settings, long long int argum)
 
     if (settings->accuracy)
     {
-        for (int i = 0; i < settings->accuracy - define_length(argum); i++)
+        for (int i = 0; i < settings->accuracy - def_len; i++)
             str[(*output)++] = '0';
     }
 
@@ -318,31 +371,39 @@ void define_sett(const char *format, int *i, Settings *settings)
 
 int main(void)
 {
+    setlocale(LC_ALL, ""); // Позволяет корректно работать с Unicode
     char mas1[100] = "privet_hi";
     char mas2[100] = "privet_hi";
     char mas3[100] = "privet_hi";
     char mas4[100] = "privet_hi";
     char mas5[100];
-    char mas6[100], mas7[100], mas8[100], ma9[100], mas10[100];
-    int n1, n2, n3, n4, n5, n6, n7, n8, n9, n10;
-    n1 = sprintf(mas1, "%.1lld", 2147483648);
-    n2 = s21_sprintf(mas2, "%.1lld", 2147483648);
+    char mas6[100], mas7[100], mas8[100], mas9[100], mas10[100];
+    int n1, n2, n3, n4, n5, n6, n7, n8, n9 = 0, n10 = 0;
+    n1 = sprintf(mas1, "%6u", 1234);
+    n2 = s21_sprintf(mas2, "%6u", 1234);
     n3 = sprintf(mas3, "%.2s %s", "priv", "huy");
     n4 = s21_sprintf(mas4, "%.2s %s", "priv", "huy");
     n5 = sprintf(mas5, "%5c", 'A');
-    //n6 = s21_sprintf(mas6, "%5c", 'A');
+    n6 = s21_sprintf(mas6, "%5c", 'A');
     n7 = sprintf(mas7, "% .5f", 12.123456789);
     n8 = s21_sprintf(mas8, "% .5f", 12.123456789);
+    n9 = sprintf(mas9, "%6u", 1234);
+    n10 = s21_sprintf(mas10, "%6u", 1234);
 
     printf("sprintf: %d, %s\n", n1, mas1);
     printf("s21_sprintf: %d, %s\n", n2, mas2);
     printf("sprintf: %d, %s\n", n3, mas3);
     printf("s21_sprintf: %d, %s\n", n4, mas4);
     printf("sprintf: %d, %s\n", n5, mas5);
-    //printf("sprintf: %d, %s\n", n6, mas6);
+    printf("s21_sprintf: %d, %s\n", n6, mas6);
     printf("sprintf: %d, %s\n", n7, mas7);
-    printf("sprintf: %d, %s\n", n8, mas8);
+    printf("s21_sprintf: %d, %s\n", n8, mas8);
+    printf("sprintf: %d, %s\n", n9, mas9);
+    printf("s21_sprintf: %d, %s\n", n10, mas10);
 
+    char buf[100];
+    s21_sprintf(buf, "%lc", L"Ёm");
+    printf("%s\n", buf);
     return 0;
 
 }

@@ -29,9 +29,44 @@ int define_length(long long int num)
     return res;
 }
 
+int define_length_unsigned(unsigned long long int num)
+{
+    int res = 0;
+    if (num == 0)
+        res = 1;
+    else
+    {
+        while (num > 0)
+        {
+            num /= 10;
+            res++;
+        }
+    }
+    return res;
+}
+
 void number_to_string(long long int num , char *str)
 {
     num = num < 0 ? num * (-1) : num;
+
+    int i = 0;
+    do {
+        str[i++] = (num % 10) + '0';
+        num /= 10;
+    } while (num > 0);
+
+    str[i] = '\0';
+
+    for (int j = 0, k = i - 1; j < k; j++, k--) {
+        char temp = str[j];
+        str[j] = str[k];
+        str[k] = temp;
+    }
+}
+
+void number_to_string_unsigned(unsigned long long int num , char *str)
+{
+    // num = num < 0 ? num * (-1) : num;
 
     int i = 0;
     do {
@@ -53,8 +88,6 @@ void double_to_string(double num, char *str, int max_digits)
     long long int whole = (long long int)num;
     double fraction = num - whole;
     int count_frac_dig = count_fraction_digits(num, 15);
-    printf("\nmax_digits = %d\n", max_digits);
-    printf("\ncount_frac_dig = %d\n", count_frac_dig);
 
     int i = 0;
     do {
