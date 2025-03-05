@@ -12,6 +12,6 @@ additional_funcs.o: additional_funcs.c
 	gcc -c additional_funcs.c -o additional_funcs.o
 
 clean:
-	DEL *.o *.exe
+	rm *.o *.exe
 
 rebuild: clean all
