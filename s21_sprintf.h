@@ -33,6 +33,7 @@ void define_sett(const char *format, int *i, Settings *settings);
 void process_minus_flag(char *str, int *output, Settings *settings, int argum_length);
 void process_d(char *str, int *output, Settings *settings, long long int argum);
 void process_s(char *str, int *output, Settings *settings, char *argum);
+void process_ls(char *str, int *output, Settings *settings, wchar_t *argum);
 void process_c(char *str, int *output, Settings *settings, int argum);
 void process_lc(char *str, int *output, Settings *settings, wchar_t argum);
 void process_f(char *str, int *output, Settings *settings, double argum);

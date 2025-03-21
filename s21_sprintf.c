@@ -48,8 +48,16 @@ int s21_sprintf(char *str, const char *format, ...)
             }
             else if (settings.s_spec)
             {
-                char *value = va_arg(arg, char *);
-                process_s(str, &output, &settings, value);
+                if (settings.length == 'l')
+                {
+                    wchar_t *value = (wchar_t *) va_arg(arg, char *);
+                    process_ls(str, &output, &settings, value);
+                }
+                else
+                {
+                    char *value = va_arg(arg, char *);
+                    process_s(str, &output, &settings, value);
+                }
             }
             else if (settings.c_spec)
             {
@@ -197,14 +205,40 @@ void process_c(char *str, int *output, Settings *settings, int argum)
     str[(*output)++] = (char)argum;
 }
 
+void process_ls(char *str, int *output, Settings *settings, wchar_t *argum)
+{
+    int len = wcstombs(((void *)0), argum, 0) + 1;
+    char *converted = (char *)malloc(len);
+    if (!converted) return;
+
+    wcstombs(converted, argum, len);
+    int argum_length = 0;
+
+    for (int i = 0; converted[i] != '\0'; i++)
+        argum_length++;
+    process_minus_flag(str, output, settings, argum_length);
+
+    if (settings->is_accuracy && settings->accuracy < argum_length)
+    {
+        for (int i = 0; i < settings->accuracy; i++)
+            str[(*output)++] = converted[i];
+    }
+    else
+    {
+        for (int i = 0; argum[i] != '\0'; i++)
+            str[(*output)++] = converted[i];
+    }
+
+    free(converted);
+}
+
 void process_s(char *str, int *output, Settings *settings, char *argum)
 {
     int argum_length = 0;
 
     for (int i = 0; argum[i] != '\0'; i++)
-    {
         argum_length++;
-    }
+
     process_minus_flag(str, output, settings, argum_length);
     
     //printf("%d, %d, %d\n", settings->is_accuracy, settings->accuracy, argum_length);
@@ -342,8 +376,8 @@ int main(void)
     char mas3[100] = "privet_hi";
     char mas4[100] = "privet_hi";
     char mas5[100];
-    char mas6[100], mas7[100], mas8[100], mas9[100], mas10[100];
-    int n1, n2, n3, n4, n5, n6, n7, n8, n9 = 0, n10 = 0;
+    char mas6[100], mas7[100], mas8[100], mas9[100], mas10[100], mas11[100], mas12[100];
+    int n1, n2, n3, n4, n5, n6, n7, n8, n9 = 0, n10 = 0, n11 = 0, n12 = 0;
     n1 = sprintf(mas1, "%6u", 1234);
     n2 = s21_sprintf(mas2, "%6u", 1234);
     n3 = sprintf(mas3, "%.2s %s", "priv", "huy");
@@ -354,6 +388,7 @@ int main(void)
     n8 = s21_sprintf(mas8, "% .5f", 12.123456789);
     n9 = sprintf(mas9, "%6u", 1234);
     n10 = s21_sprintf(mas10, "%6u", 1234);
+    
 
     printf("sprintf: %d, %s\n", n1, mas1);
     printf("s21_sprintf: %d, %s\n", n2, mas2);
@@ -367,7 +402,10 @@ int main(void)
     printf("s21_sprintf: %d, %s\n", n10, mas10);
 
     char buf[100];
-    s21_sprintf(buf, "%lc", L"Ёm");
+    // s21_sprintf(buf, "%lc", L"Ёm");
+    // printf("%s\n", buf);
+
+    sprintf(buf, "%lc", L"Привет, мир!");
     printf("%s\n", buf);
     return 0;
 
